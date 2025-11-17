@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG PYTHON_VERSION=3.11
+ARG PYTHON_VERSION=3.13
 
 FROM python:${PYTHON_VERSION}-slim AS python-base
 ARG TEST_ENV
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get update; \
     apt-get upgrade -y; \
     apt install --no-install-recommends -y  \
-        git libglib2.0-0 libgl1 libglx-mesa0; \
+        git; \
     apt-get autoremove -y
 
 # install base requirements
@@ -44,5 +44,5 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
 COPY . .
 
 EXPOSE 9090
-
 CMD gunicorn --preload --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 _wsgi:app
+

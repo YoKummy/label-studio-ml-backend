@@ -41,7 +41,7 @@ jobs:
           chmod +x /usr/local/bin/gitleaks
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.event.after }}
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: GitLeaks results
           path: results.sarif
