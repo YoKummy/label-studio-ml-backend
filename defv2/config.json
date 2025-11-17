@@ -1,0 +1,27 @@
+{
+  "model_path": "C:/Users/1003380/Desktop/yolov9-main/runs/train/LGPbest/weights/best.pt",
+  "conf": 0.25,
+  "version": "1.1",
+  "labels": {
+    "0": "Printing Defect",
+    "1": "Hole Bias",
+    "2": "Foreign Object",
+    "3": "Reflector Oil Stain",
+    "4": "Reflector Bubbles",
+    "5": "Reflector Crease",
+    "6": "Reflector Scratch",
+    "7": "Reflector Damage",
+    "8": "LGP Scratch",
+    "9": "LGP Oil Stain",
+    "10": "Mask Crease",
+    "11": "Mask Scratch",
+    "12": "Mask Glue Foreign Object",
+    "13": "Mask Damage",
+    "14": "Mask Oil Stain",
+    "15": "Mylar Bias",
+    "16": "Lack Glue",
+    "17": "Glue Edge Curl",
+    "18": "Edge Sealing Warping",
+    "19": "Mask Glue Residue"
+  }
+}

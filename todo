@@ -1,0 +1,100 @@
+# Label Studio Enhancement TODO
+
+This is a roadmap/todo list for adding extra features to Label Studio CE. Each section outlines the function, feasibility, and potential implementation approach.
+
+---
+
+## 1. Dynamic Adjustable ML-Backend Parameters
+
+**Goal:** Allow changing ML backend parameters on-the-fly without restarting the backend.
+
+* Features:
+
+  * Adjust confidence thresholds dynamically.
+  * Swap model versions in real-time.
+  * Change batch size and other model config.
+
+* Implementation Ideas:
+
+  * Hot-reload models in memory.
+  * Expose `/update-config` API endpoint.
+  * Use a config file or ModelManager class.
+
+* Feasibility: Moderate
+
+* Priority: High
+
+---
+
+## 2. Event Logger / Multi-Version Annotation History
+
+**Goal:** Keep track of every annotation event, including re-labels, for auditing and recovery.
+
+* Features:
+
+  * Track per-user annotation history.
+  * Detect re-labels and store previous versions.
+  * Optional UI feed for recent activity.
+  * Webhook-based or backend logging.
+
+* Implementation Ideas:
+
+  * Django signals for backend logging.
+  * Webhook server to store events in JSON/database.
+  * Admin page or lightweight React component for UI feed.
+
+* Feasibility: Moderate
+
+* Priority: High
+
+---
+
+## 3. Semantic Expand / Auto Edge Detection
+
+**Goal:** Enhance labeling efficiency by automatically refining masks or polygons.
+
+* Features:
+
+  * User draws rough mask → ML backend auto-refines.
+  * Integration with models like T-Rex2 (segmentation networks).
+
+* Implementation Ideas:
+
+  * Custom ML backend for segmentation.
+  * Frontend integration to update labels in real-time.
+  * Possibly add a new widget for polygon refinement.
+
+* Feasibility: High complexity
+
+* Priority: Medium
+
+---
+
+## 4. GPU Resource Preview & Training Monitoring
+
+**Goal:** Provide annotators or admins with real-time feedback on GPU usage and model training status.
+
+* Features:
+
+  * GPU utilization, VRAM usage on Linux server.
+  * Monitor ongoing training progress.
+  * Possibly trigger dynamic training from Label Studio.
+
+* Implementation Ideas:
+
+  * Use Python libraries (nvidia-smi, PyTorch/TensorFlow) to fetch metrics.
+  * Expose metrics via REST API.
+  * React frontend dashboard for visualization.
+  * Dynamic training triggers through backend API.
+
+* Feasibility: Very high complexity
+
+* Priority: Low/experimental
+
+---
+
+### Notes:
+
+* Start with #1 (dynamic ML parameters) and #2 (event logger) for maximum ROI.
+* \#3 and #4 are ambitious, consider prototyping separately before integrating.
+* Combine webhooks + scheduled snapshots for safety and auditing.
