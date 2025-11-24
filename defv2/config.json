@@ -1,7 +1,7 @@
 {
   "model_path": "C:/Users/1003380/Desktop/yolov9-main/runs/train/LGPbest/weights/best.pt",
   "conf": 0.25,
-  "version": "1.1",
+  "version": "v1",
   "labels": {
     "0": "Printing Defect",
     "1": "Hole Bias",
