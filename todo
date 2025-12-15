@@ -1,100 +1,135 @@
-# Label Studio Enhancement TODO
-
-This is a roadmap/todo list for adding extra features to Label Studio CE. Each section outlines the function, feasibility, and potential implementation approach.
 
 ---
 
-## 1. Dynamic Adjustable ML-Backend Parameters
+# **Zero-Model Annotation Assist — TODO**
 
-**Goal:** Allow changing ML backend parameters on-the-fly without restarting the backend.
-
-* Features:
-
-  * Adjust confidence thresholds dynamically.
-  * Swap model versions in real-time.
-  * Change batch size and other model config.
-
-* Implementation Ideas:
-
-  * Hot-reload models in memory.
-  * Expose `/update-config` API endpoint.
-  * Use a config file or ModelManager class.
-
-* Feasibility: Moderate
-
-* Priority: High
+A lightweight feature that auto-suggests similar objects after the annotator labels the first one.
+Powered by classical CV (template matching + optional ORB), toggleable in the labeling UI.
 
 ---
 
-## 2. Event Logger / Multi-Version Annotation History
+## **1. Backend (CV Sidecar Service)**
 
-**Goal:** Keep track of every annotation event, including re-labels, for auditing and recovery.
+* [ ] Create a small service (Flask or FastAPI) running on a separate port (e.g. 9090)
+* [ ] Implement endpoint: `POST /suggest`
 
-* Features:
-
-  * Track per-user annotation history.
-  * Detect re-labels and store previous versions.
-  * Optional UI feed for recent activity.
-  * Webhook-based or backend logging.
-
-* Implementation Ideas:
-
-  * Django signals for backend logging.
-  * Webhook server to store events in JSON/database.
-  * Admin page or lightweight React component for UI feed.
-
-* Feasibility: Moderate
-
-* Priority: High
+  * Input: full image + bounding box coordinates
+  * Output: list of suggested bounding boxes
+* [ ] Implement basic template matching (OpenCV `matchTemplate`)
+* [ ] Add thresholding and NMS to remove duplicate matches
+* [ ] (Optional) Implement ORB-based matching to reduce false positives
+* [ ] Combine template + ORB for hybrid mode
+* [ ] Return results in Label Studio-friendly format
+* [ ] Add debug mode (show heatmaps / candidate matches)
 
 ---
 
-## 3. Semantic Expand / Auto Edge Detection
+## **2. Label Studio Integration**
 
-**Goal:** Enhance labeling efficiency by automatically refining masks or polygons.
-
-* Features:
-
-  * User draws rough mask → ML backend auto-refines.
-  * Integration with models like T-Rex2 (segmentation networks).
-
-* Implementation Ideas:
-
-  * Custom ML backend for segmentation.
-  * Frontend integration to update labels in real-time.
-  * Possibly add a new widget for polygon refinement.
-
-* Feasibility: High complexity
-
-* Priority: Medium
+* [ ] Identify frontend event triggered when user finishes drawing a bounding box
+* [ ] Add hook to call the sidecar service with latest annotation
+* [ ] Insert suggested bounding boxes into current task as pre-annotations
+* [ ] Ensure suggestions are visually distinct (e.g. dotted outline)
+* [ ] Allow user to accept/reject suggestions
+* [ ] Make sure nothing breaks multi-object tasks
 
 ---
 
-## 4. GPU Resource Preview & Training Monitoring
+## **3. UI / UX**
 
-**Goal:** Provide annotators or admins with real-time feedback on GPU usage and model training status.
+* [ ] Add a toggle: “Template Assist: ON/OFF”
 
-* Features:
-
-  * GPU utilization, VRAM usage on Linux server.
-  * Monitor ongoing training progress.
-  * Possibly trigger dynamic training from Label Studio.
-
-* Implementation Ideas:
-
-  * Use Python libraries (nvidia-smi, PyTorch/TensorFlow) to fetch metrics.
-  * Expose metrics via REST API.
-  * React frontend dashboard for visualization.
-  * Dynamic training triggers through backend API.
-
-* Feasibility: Very high complexity
-
-* Priority: Low/experimental
+  * Location: settings panel
+  * State should persist per session
+* [ ] Add visual feedback while suggestions are loading
+* [ ] Add small notification when suggestions appear
+* [ ] Ensure suggestions don’t interrupt annotation flow
 
 ---
 
-### Notes:
+## **4. Configuration**
 
-* Start with #1 (dynamic ML parameters) and #2 (event logger) for maximum ROI.
-* \#3 and #4 are ambitious, consider prototyping separately before integrating.
-* Combine webhooks + scheduled snapshots for safety and auditing.
+* [ ] Add optional settings inside LS config:
+
+  * [ ] Matching threshold
+  * [ ] Max suggestions
+  * [ ] ORB on/off
+* [ ] Store defaults in project settings
+* [ ] Add environment variable to enable globally (e.g. `LS_TM_ASSIST=true`)
+
+---
+
+## **5. Testing**
+
+* [ ] Test on simple repeated objects (e.g. cats, logos, bottle caps)
+* [ ] Test on cluttered backgrounds
+* [ ] Test speed on large images
+* [ ] Ensure fallback behavior when service fails
+* [ ] Confirm compatibility with active learning later
+
+---
+
+## **6. Future Extensions (Not Required Now)**
+
+* [ ] Support polygons & keypoints, not just boxes
+* [ ] Auto-tune threshold per image
+* [ ] Cache computed features per task
+* [ ] Provide API docs for external use
+
+---
+
+If you want, I can generate a **more detailed version** with task owners, subtasks, and code skeleton links.
+
+
+The following is the mock up version in python, my objective is to let user annotate something, and return the selected region to backend(flask or ml backend), and then use template matching to predict and give user similar result for auto annotation
+"""
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+
+image = cv2.imread("muffin.jpg")
+print(image.shape)
+
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# small = cv2.resize(gray, (0, 0), fx=0.5, fy=0.5)
+
+x, y, w, h = cv2.selectROI("Select Template", gray, showCrosshair=True, fromCenter=False)
+cv2.destroyAllWindows()
+template = gray[y:y+h, x:x+w]
+
+w, h = template.shape[::-1]
+
+result = cv2.matchTemplate(gray, template, cv2.TM_CCOEFF_NORMED)
+threshold = 0.35
+
+# loc = np.where(result >= threshold)
+# for pt in zip(*loc[::-1]):
+#     cv2.rectangle(gray, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+# cv2.imwrite("matched.png", gray)
+
+y, x = np.where(result >= threshold)
+scores = result[y, x]
+
+candidates = list(zip(x, y, scores))
+
+final_detections = []
+min_distance = w // 2
+for x, y, score in sorted(candidates, key=lambda c: c[2], reverse=True):
+    keep = True
+    for fx, fy, fscore in final_detections:
+        if np.sqrt((x-fx)**2 + (y-fy)**2) < min_distance:
+            keep = False
+            break
+    if keep:
+        final_detections.append((x, y, score))
+
+# 7. Draw bounding boxes on the original image
+for x, y, _ in final_detections:
+    cv2.rectangle(gray, (x, y), (x + w, y + h), (0, 255, 0), 2)
+cv2.imwrite("detected_muffins.png", gray)
+
+cv2.imshow("Detected Muffins", gray)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+"""
