@@ -2,17 +2,74 @@ import logging
 import cv2
 import numpy as np
 import requests
+import os
+import urllib.parse
 from flask import Flask, request, jsonify
-
+from flask_cors import CORS
 app = Flask(__name__)
+CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def download_image(url):
+# =============================================================================
+#  CONFIGURATION
+# =============================================================================
+# Set this to the absolute path of your image folder.
+#
+# CASE 1: If you used "Import" -> "Upload Files" in Label Studio:
+# Images are usually here: C:\Users\<YOU>\AppData\Local\label-studio\media\upload
+#
+# CASE 2: If you used "Cloud/Local Storage" -> "Local files":
+# Set this to the folder you pointed Label Studio to.
+# =============================================================================
+# Trying to guess the default upload location based on your username
+LOCAL_IMAGE_ROOT = r"C:\Users\1003380"  #C:\Users\1003380\AppData\Local\label-studio\media\upload
+
+
+def get_image(url):
+    """
+    Tries to load image from local disk first (if configured),
+    otherwise falls back to HTTP download.
+    """
+    # 1. Try Local Disk Access
+    if LOCAL_IMAGE_ROOT and os.path.exists(LOCAL_IMAGE_ROOT):
+        try:
+            parsed_url = urllib.parse.urlparse(url)
+            
+            # Logic for "Local Storage" source (URLs look like ?d=folder/img.jpg)
+            query_params = urllib.parse.parse_qs(parsed_url.query)
+            if 'd' in query_params:
+                # relative_path = query_params['d'][0]
+                # local_path = os.path.join(LOCAL_IMAGE_ROOT, relative_path)
+                relative_path = urllib.parse.unquote(query_params['d'][0])
+                relative_path = relative_path.replace('\\', os.sep).replace('/', os.sep)
+
+                local_path = os.path.join(LOCAL_IMAGE_ROOT, relative_path)
+                if os.path.exists(local_path):
+                    logger.info(f"Loading local file (via ?d=): {local_path}")
+                    return cv2.imread(local_path)
+
+            # Logic for "Uploaded" files (URLs look like /data/upload/1/img.jpg)
+            # We try to match the path structure
+            path_parts = parsed_url.path.strip('/').split('/')
+            
+            # If URL is /data/upload/12/img.jpg, we want to join LOCAL_IMAGE_ROOT + 12/img.jpg
+            # We iterate to find a matching subpath
+            if 'upload' in path_parts:
+                idx = path_parts.index('upload')
+                # Join everything after 'upload'
+                sub_path = os.path.join(*path_parts[idx+1:])
+                local_path = os.path.join(LOCAL_IMAGE_ROOT, sub_path)
+                if os.path.exists(local_path):
+                    logger.info(f"Loading local file (upload match): {local_path}")
+                    return cv2.imread(local_path)
+
+        except Exception as e:
+            logger.warning(f"Failed to load from local disk: {e}")
+
+    # 2. Fallback to HTTP Download
     try:
-        # In a real scenario, you might need to handle authentication headers
-        # if the image is protected by Label Studio's auth.
-        # For now, we assume the URL is accessible.
+        logger.info(f"Downloading image from URL: {url}")
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
@@ -78,6 +135,11 @@ def template_matching(full_image, bbox, threshold=0.7):
         
     return suggestions
 
+
+@app.route("/health", methods=["GET"])
+def health():
+    return "ok"
+
 @app.route('/suggest', methods=['POST'])
 def suggest():
     data = request.json
@@ -95,9 +157,11 @@ def suggest():
     if not image_url or not bbox_data:
         return jsonify({'error': 'Missing image_url or bbox'}), 400
         
-    image = download_image(image_url)
+    # Use the new smart get_image function
+    image = get_image(image_url)
+    
     if image is None:
-        return jsonify({'error': 'Could not download image'}), 400
+        return jsonify({'error': 'Could not load image'}), 400
         
     img_h, img_w = image.shape[:2]
     
@@ -130,4 +194,6 @@ def suggest():
     return jsonify({'suggestions': suggestions_pct})
 
 if __name__ == '__main__':
+    print(f"Starting Zero-Shot Assist on port 9090...")
+    print(f"Local Image Root: {LOCAL_IMAGE_ROOT}")
     app.run(host='0.0.0.0', port=9090)
