@@ -1,6 +1,3 @@
-
----
-
 # **Zero-Model Annotation Assist — TODO**
 
 A lightweight feature that auto-suggests similar objects after the annotator labels the first one.
@@ -10,51 +7,48 @@ Powered by classical CV (template matching + optional ORB), toggleable in the la
 
 ## **1. Backend (CV Sidecar Service)**
 
-* [ ] Create a small service (Flask or FastAPI) running on a separate port (e.g. 9090)
-* [ ] Implement endpoint: `POST /suggest`
-
+* [x] Create a small service (Flask or FastAPI) running on a separate port (e.g. 9090)
+* [x] Implement endpoint: `POST /suggest`
   * Input: full image + bounding box coordinates
   * Output: list of suggested bounding boxes
-* [ ] Implement basic template matching (OpenCV `matchTemplate`)
-* [ ] Add thresholding and NMS to remove duplicate matches
+* [x] Implement basic template matching (OpenCV `matchTemplate`)
+* [x] Add thresholding and NMS to remove duplicate matches
 * [ ] (Optional) Implement ORB-based matching to reduce false positives
 * [ ] Combine template + ORB for hybrid mode
-* [ ] Return results in Label Studio-friendly format
+* [x] Return results in Label Studio-friendly format
 * [ ] Add debug mode (show heatmaps / candidate matches)
 
 ---
 
 ## **2. Label Studio Integration**
 
-* [ ] Identify frontend event triggered when user finishes drawing a bounding box
-* [ ] Add hook to call the sidecar service with latest annotation
-* [ ] Insert suggested bounding boxes into current task as pre-annotations
+* [x] Identify frontend event triggered when user finishes drawing a bounding box
+* [x] Add hook to call the sidecar service with latest annotation
+* [x] Insert suggested bounding boxes into current task as pre-annotations
 * [ ] Ensure suggestions are visually distinct (e.g. dotted outline)
-* [ ] Allow user to accept/reject suggestions
-* [ ] Make sure nothing breaks multi-object tasks
+* [x] Allow user to accept/reject suggestions (Standard LS functionality)
+* [x] Make sure nothing breaks multi-object tasks
 
 ---
 
 ## **3. UI / UX**
 
-* [ ] Add a toggle: “Template Assist: ON/OFF”
-
+* [x] Add a toggle: “Template Assist: ON/OFF”
   * Location: settings panel
   * State should persist per session
-* [ ] Add visual feedback while suggestions are loading
-* [ ] Add small notification when suggestions appear
-* [ ] Ensure suggestions don’t interrupt annotation flow
+* [x] Add visual feedback while suggestions are loading
+* [x] Add small notification when suggestions appear
+* [x] Ensure suggestions don’t interrupt annotation flow
 
 ---
 
 ## **4. Configuration**
 
-* [ ] Add optional settings inside LS config:
-
-  * [ ] Matching threshold
+* [x] Add optional settings inside LS config:
+  * [x] Matching threshold
   * [ ] Max suggestions
   * [ ] ORB on/off
-* [ ] Store defaults in project settings
+* [x] Store defaults in project settings
 * [ ] Add environment variable to enable globally (e.g. `LS_TM_ASSIST=true`)
 
 ---
@@ -78,9 +72,10 @@ Powered by classical CV (template matching + optional ORB), toggleable in the la
 
 ---
 
-If you want, I can generate a **more detailed version** with task owners, subtasks, and code skeleton links.
+## **Reference Prototype (Python)**
 
-
+```python
+"""
 The following is the mock up version in python, my objective is to let user annotate something, and return the selected region to backend(flask or ml backend), and then use template matching to predict and give user similar result for auto annotation
 """
 import cv2
@@ -132,4 +127,4 @@ cv2.imwrite("detected_muffins.png", gray)
 cv2.imshow("Detected Muffins", gray)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-"""
+```
